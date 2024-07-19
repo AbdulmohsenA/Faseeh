@@ -1,0 +1,6 @@
+*.xlsx
+*.csv
+
+private/
+
+__pycache__/
