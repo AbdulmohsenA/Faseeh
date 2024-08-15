@@ -1,6 +1,10 @@
 *.xlsx
 *.csv
-
+*.env
 private/
+
+data/
+
+experiments/
 
 __pycache__/
