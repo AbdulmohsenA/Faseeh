@@ -3,6 +3,8 @@
 *.env
 private/
 
+wandb/
+
 data/
 
 experiments/
