@@ -2,6 +2,7 @@
 *.csv
 *.env
 private/
+.vscode
 
 wandb/
 
@@ -10,3 +11,7 @@ data/
 experiments/
 
 __pycache__/
+
+eval
+
+model_preparation
