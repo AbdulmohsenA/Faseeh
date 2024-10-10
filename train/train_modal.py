@@ -25,8 +25,8 @@ image = modal.Image.debian_slim().pip_install([
 ])
 
 def setup_environment():
-    HfFolder.save_token("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")
-    wandb.login(key="f216d281d44a13dc6d5b7c00942e66e6f02f4d53")
+    HfFolder.save_token(os.environ["HF_TOKEN"])
+    wandb.login(key=os.environ["WANDB_KEY"])
     seed = 1
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True
@@ -167,7 +167,7 @@ def evaluate_model_locally(wandb_run_id):
     tokenized_dataset = load_and_preprocess_data(tokenizer)
 
     data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model, padding=True, return_tensors='pt')
-    eval_dataloader = torch.utils.data.DataLoader(tokenized_dataset["test"], batch_size=4, collate_fn=data_collator)
+    eval_dataloader = torch.utils.data.DataLoader(tokenized_dataset["test"], batch_size=8, collate_fn=data_collator)
     
     accelerator = Accelerator(mixed_precision="fp16")
     model = model.to(accelerator.device)
@@ -176,14 +176,18 @@ def evaluate_model_locally(wandb_run_id):
         model, eval_dataloader
     )
     
+    model.gradient_checkpointing_disable()
+    model.gradient_checkpointing_kwargs = {"use_reentrant": False}
+    
     model.eval()
     eval_metrics = {"eval_loss": 0, "bertscore_f1": 0, "gen_length": 0}
+    
     for batch in tqdm(eval_dataloader):
         print(f"Allocated: {torch.cuda.memory_allocated() / 1024**2:.2f} MB")
         with torch.no_grad():
             outputs = model(**batch)
             
-            predictions = torch.argmax(outputs.logits, dim=2)
+            predictions = torch.argmax(outputs.logits.detach(), dim=2)
             labels = batch['labels']
             metrics = compute_metrics(predictions, labels, tokenizer)
             
@@ -191,6 +195,7 @@ def evaluate_model_locally(wandb_run_id):
         eval_metrics["bertscore_f1"] += metrics['f1']
         eval_metrics["gen_length"] += metrics['gen_len']
 
+        accelerator.free_memory()
 
     eval_metrics["eval_loss"] /= len(eval_dataloader)
     eval_metrics["bertscore_f1"] /= len(eval_dataloader)
