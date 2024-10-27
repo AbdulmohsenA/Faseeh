@@ -5,13 +5,11 @@ private/
 .vscode
 
 wandb/
-
+train/
 data/
 
 experiments/
 
 __pycache__/
-
-eval
 
 model_preparation
